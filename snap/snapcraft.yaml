@@ -1,9 +1,15 @@
 name: ovn-chassis
 version: 21.09.0
 base: core20
-summary: Open Virtual Network Chassis
+summary: Open Virtual Network chassis
 description: |
-  OVN (Open Virtual Network) chassis snap
+ OVN, the Open Virtual Network, is a system to support virtual network
+ abstraction.  OVN complements the existing capabilities of OVS to add
+ native support for virtual network abstractions, such as virtual L2 and L3
+ overlays and security groups.
+ .
+ The ovn-chassis snap provides the userspace components and utilities
+ for OVN that can be run on every host/hypervisor.
 grade: devel
 confinement: strict
 environment:
@@ -160,10 +166,11 @@ parts:
       - uca-sources
     stage-packages:
       - openvswitch-switch
+      - openvswitch-switch-dpdk
       - ovn-host
     organize:
        # Deal with alternatives usage in deb packages.
-       usr/lib/openvswitch-switch/ovs-vswitchd: usr/sbin/ovs-vswitchd
+       usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk: usr/sbin/ovs-vswitchd
 
   ovs-wrapper:
     source: ./snap/local/snap-wrappers/ovs
