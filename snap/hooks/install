@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -ex
+
+for component in ovn openvswitch; do
+  for dir in log run etc; do
+    mkdir -p $SNAP_COMMON/$dir/$component
+  done
+done
