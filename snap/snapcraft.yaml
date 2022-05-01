@@ -1,15 +1,21 @@
 name: ovn-chassis
 version: 21.09.0
 base: core20
-summary: Open Virtual Network chassis
+summary: Open vSwitch and Open Virtual Network chassis components
 description: |
+ The ovn-chassis snap provides Open vSwitch (OVS) and the Open Virtual Network
+ (OVN) distributed controller.  Together they form the data plane components
+ of OVN.
+
+ Open vSwitch is a multilayer software switch.  OVS's goal is to implement a
+ production quality switch platform that supports standard management
+ interfaces and opens the forwarding functions to programmatic extension and
+ control.
+
  OVN, the Open Virtual Network, is a system to support virtual network
  abstraction.  OVN complements the existing capabilities of OVS to add
  native support for virtual network abstractions, such as virtual L2 and L3
  overlays and security groups.
- .
- The ovn-chassis snap provides the userspace components and utilities
- for OVN that can be run on every host/hypervisor.
 grade: devel
 confinement: strict
 environment:
