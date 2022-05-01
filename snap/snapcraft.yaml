@@ -58,7 +58,6 @@ apps:
       - system-trace
       - hardware-observe
       - hugepages-control
-      - microstack-support
   ovsdb-server:
     command: bin/ovs-wrapper $SNAP/usr/share/openvswitch/scripts/ovs-ctl --no-ovs-vswitchd --no-monitor start
     stop-command: usr/share/openvswitch/scripts/ovs-ctl --no-ovs-vswitchd stop
@@ -70,7 +69,6 @@ apps:
       - openvswitch-support
       - process-control
       - system-trace
-      - microstack-support
 
   # OVN
   ovn-controller:
@@ -84,7 +82,7 @@ apps:
       - openvswitch-support
       - process-control
       - system-trace
-      - microstack-support
+      - hardware-observe
     after:
       - ovsdb-server
       - ovs-vswitchd
@@ -95,57 +93,48 @@ apps:
     plugs:
       - network
       - network-bind
-      - microstack-support
   ovn-trace:
     command: usr/bin/ovn-trace
     plugs:
       - network
       - network-bind
-      - microstack-support
   ovn-detrace:
     command: usr/bin/ovn-detrace
     plugs:
       - network
       - network-bind
-      - microstack-support
   ovn-nbctl:
     command: usr/bin/ovn-nbctl
     plugs:
       - network
       - network-bind
-      - microstack-support
   ovn-sbctl:
     command: usr/bin/ovn-sbctl
     plugs:
       - network
       - network-bind
       - process-control
-      - microstack-support
 
   ovs-vsctl:
     command: usr/bin/ovs-vsctl
     plugs:
       - network
       - process-control
-      - microstack-support
   ovs-appctl:
     command: usr/bin/ovs-appctl
     plugs:
       - network
       - process-control
-      - microstack-support
   ovs-ofctl:
     command: usr/bin/ovs-ofctl
     plugs:
       - network
       - process-control
-      - microstack-support
   ovs-dpctl:
     command: usr/bin/ovs-dpctl
     plugs:
       - network
       - process-control
-      - microstack-support
 
 parts:
   # Add Ubuntu Cloud Archive sources.
