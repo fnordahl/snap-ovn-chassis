@@ -166,7 +166,7 @@ parts:
       apt update
       snapcraftctl pull
 
-  hypervisor:
+  ovn-chassis:
     plugin: nil
     after:
       - uca-sources
