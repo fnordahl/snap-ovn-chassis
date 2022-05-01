@@ -1,0 +1,117 @@
+name: Build and test
+on: [push, pull_request]
+jobs:
+  snap:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt remove --purge lxd lxd-client
+          sudo snap install snapcraft --edge --classic
+          sudo snap install lxd
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo chmod 0666 /var/snap/lxd/common/lxd/unix.socket
+          echo "/snap/bin" >> $GITHUB_PATH
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          snapcraft snap --use-lxd
+
+      - name: Install built snap
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo modprobe openvswitch
+          sudo modprobe nf_conntrack
+          sudo snap install *.snap --dangerous
+          # Since we have no snap interface auto-connection here, on install
+          # the daemons will not be happy and complain a lot.  Clear out the
+          # logs so that we will be able to get a clear reading on their state
+          # after the test.
+          sudo snap stop ovn-chassis
+          sudo sh -c \
+            ":> /var/snap/ovn-chassis/common/log/openvswitch/ovs-vswitchd.log"
+          sudo sh -c \
+            ":> /var/snap/ovn-chassis/common/log/ovn/ovn-controller.log"
+          for interface in \
+                  network \
+                  network-bind \
+                  network-control \
+                  firewall-control \
+                  process-control \
+                  system-trace \
+                  hardware-observe \
+                  hugepages-control \
+                  ; do
+              sudo snap connect ovn-chassis:$interface
+          done
+          sudo snap start ovn-chassis
+          sudo mkdir /var/snap/ovn-chassis/common/tmp
+          sudo chmod 1777 /var/snap/ovn-chassis/common/tmp
+
+      - name: Checkout OVN for testsuite
+        uses: actions/checkout@v2
+        with:
+          repository: ovn-org/ovn
+          submodules: recursive
+          path: ovn
+
+      - name: Patch and build OVN testsuite
+        shell: bash
+        run: |
+          set -euxo pipefail
+          patch -d ovn -p1 < tests/ovn-testsuite.patch
+          # We need to execute testsuite within the snap common directory
+          # because the testsuite will expect binaries in the snap to talk to
+          # sockets set up for NB and SB DBs in the testsuite directory.
+          mv ovn /var/snap/ovn-chassis/common/tmp
+          cd /var/snap/ovn-chassis/common/tmp/ovn/ovs
+          _cpus=`lscpu -p|grep -v ^#|wc -l`
+          ./boot.sh && ./configure && make -j $_cpus
+          cd ..
+          ./boot.sh && ./configure && make -j $_cpus
+
+      - name: Run a system testsuite test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo modprobe openvswitch
+          sudo modprobe nf_conntrack
+          sudo dmesg -c > /dev/null
+          sudo snap alias ovn-chassis.ovs-vsctl ovs-vsctl
+          sudo snap alias ovn-chassis.ovs-appctl ovs-appctl
+          sudo snap alias ovn-chassis.ovn-appctl ovn-appctl
+          sudo snap alias ovn-chassis.ovs-ofctl ovs-ofctl
+          cd /var/snap/ovn-chassis/common/tmp/ovn
+          make check-kernel AUTOTEST_PATH=/snap/bin:ovs/ovsdb:northd:utilities:tests SUDO=sudo TESTSUITEFLAGS=1
+          sudo dmesg | (grep -v DENIED.*systemctl || true) |grep DENIED || true
+          sudo grep ERR /var/snap/ovn-chassis/common/log/openvswitch/ovs-vswitchd.log || true
+          sudo grep ERR /var/snap/ovn-chassis/common/log/ovn/ovn-controller.log || true
+
+      - name: Collect logs on failure
+        if: failure() || cancelled()
+        run: |
+          mkdir logs
+          cp /var/snap/ovn-chassis/common/tmp/ovn/config.log logs
+          sudo dmesg > logs/dmesg.txt
+          sudo cp -r /var/snap/ovn-chassis/common/tmp/ovn/tests/system-kmod-testsuite.* logs || true
+          sudo cp /var/snap/ovn-chassis/common/log/openvswitch/* logs
+          sudo cp /var/snap/ovn-chassis/common/log/ovn/* logs
+          sudo chmod -R +r logs
+          tar -czvf logs.tgz logs
+
+      - name: Upload logs on failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: logs.tgz
