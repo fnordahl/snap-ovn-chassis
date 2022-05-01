@@ -43,7 +43,7 @@ architectures:
 apps:
   # Openvswitch
   ovs-vswitchd:
-    command: usr/share/openvswitch/scripts/ovs-ctl --no-ovsdb-server --no-monitor start
+    command: bin/ovs-wrapper $SNAP/usr/share/openvswitch/scripts/ovs-ctl --no-ovsdb-server --no-monitor start
     stop-command: usr/share/openvswitch/scripts/ovs-ctl --no-ovsdb-server stop
     after: [ovsdb-server]
     daemon: forking
