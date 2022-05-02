@@ -16,6 +16,7 @@ description: |
  abstraction.  OVN complements the existing capabilities of OVS to add
  native support for virtual network abstractions, such as virtual L2 and L3
  overlays and security groups.
+icon: snap/local/ovn-logo.png
 grade: devel
 confinement: strict
 environment:
