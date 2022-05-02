@@ -1,5 +1,5 @@
 name: ovn-chassis
-version: 21.09.0
+adopt-info: ovn-chassis
 base: core20
 summary: Open vSwitch and Open Virtual Network chassis components
 description: |
@@ -164,6 +164,9 @@ parts:
       - openvswitch-switch
       - openvswitch-switch-dpdk
       - ovn-host
+    override-stage: |
+      snapcraftctl stage
+      snapcraftctl set-version $(dpkg-deb -f $SNAPCRAFT_PART_SRC/../stage_packages/ovn-host*.deb Version | sed -rne 's/([0-9.]+)[-+].*$$/\1/p')
     organize:
        # Deal with alternatives usage in deb packages.
        usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk: usr/sbin/ovs-vswitchd
