@@ -1,6 +1,6 @@
 name: ovn-chassis
 adopt-info: ovn-chassis
-base: core20
+base: core22
 summary: Open vSwitch and Open Virtual Network chassis components
 description: |
  The ovn-chassis snap provides Open vSwitch (OVS) and the Open Virtual Network
@@ -17,7 +17,7 @@ description: |
  native support for virtual network abstractions, such as virtual L2 and L3
  overlays and security groups.
 icon: snap/local/ovn-logo.png
-grade: devel
+grade: stable
 confinement: strict
 environment:
   LC_ALL: C
@@ -140,35 +140,15 @@ apps:
       - process-control
 
 parts:
-  # Add Ubuntu Cloud Archive sources.
-  # Allows us to fetch things such as updated libvirt.
-  uca-sources:
-    plugin: nil
-    build-packages:
-      - ubuntu-cloud-keyring
-      - software-properties-common
-      - dpkg-dev  # We'll need to manipulate sources later.
-      # The two dependencies below are added to avoid errors during
-      # the build step of the openstack-projects part (see LP: #1864589).
-      - python3-dev
-      - python3-distutils
-    override-pull: |
-      add-apt-repository -s cloud-archive:yoga
-      apt-key update
-      apt update
-      snapcraftctl pull
-
   ovn-chassis:
     plugin: nil
-    after:
-      - uca-sources
     stage-packages:
       - openvswitch-switch
       - openvswitch-switch-dpdk
       - ovn-host
     override-stage: |
       snapcraftctl stage
-      snapcraftctl set-version $(dpkg-deb -f $SNAPCRAFT_PART_SRC/../stage_packages/ovn-host*.deb Version | sed -rne 's/([0-9.]+)[-+].*$$/\1/p')
+      snapcraftctl set-version $(dpkg-deb -f $CRAFT_PART_SRC/../stage_packages/ovn-host*.deb Version | sed -rne 's/([0-9.]+)[-+].*$$/\1/p')
     organize:
        # Deal with alternatives usage in deb packages.
        usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk: usr/sbin/ovs-vswitchd
