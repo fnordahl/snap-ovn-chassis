@@ -1,5 +1,5 @@
 name: ovn-chassis
-adopt-info: ovn-chassis
+adopt-info: ovn
 base: core22
 summary: Open vSwitch and Open Virtual Network chassis components
 description: |
@@ -143,18 +143,99 @@ apps:
       - process-control
 
 parts:
-  ovn-chassis:
-    plugin: nil
+  ovs:
+    plugin: autotools
+    source: https://github.com/openvswitch/ovs.git
+    source-type: git
+    source-branch: branch-3.0
+    autotools-configure-parameters:
+      - --prefix=/usr
+      - --localstatedir=/var
+      - --enable-ssl
+      - --sysconfdir=/etc
+      - --with-dpdk=shared
+    override-build: |
+      craftctl default
+      make check TESTSUITEFLAGS="-j$CRAFT_PARALLEL_BUILD_COUNT"
+    build-packages:
+      - autoconf
+      - automake
+      - bzip2
+      - dh-python
+      - graphviz
+      - iproute2
+      - libcap-ng-dev
+      - libdbus-1-dev
+      - libdpdk-dev
+      - libnuma-dev
+      - libpcap-dev
+      - libssl-dev
+      - libtool
+      - libunbound-dev
+      - openssl
+      - pkg-config
+      - procps
+      - python3-all-dev
+      - python3-setuptools
+      - python3-sortedcontainers
+      - python3-sphinx
     stage-packages:
-      - openvswitch-switch
-      - openvswitch-switch-dpdk
-      - ovn-host
+      - dpdk
+      - librte-meta-net
+      - libevent-2.1-7
+      - libunbound8
+      - python3-sortedcontainers
+
+  ovn:
+    plugin: autotools
+    source: https://github.com/ovn-org/ovn.git
+    source-type: git
+    source-branch: branch-22.06
+    override-build: |
+      # This OVS build is used as a build time dependency for OVN and not the
+      # version installed.  See the `ovs` part above for the installed
+      # artifact.
+      cd ovs
+      ./boot.sh
+      ./configure \
+        --prefix=/usr \
+        --localstatedir=/var \
+        --enable-ssl \
+        --sysconfdir=/etc
+      make -j$CRAFT_PARALLEL_BUILD_COUNT
+      cd ..
+      ./boot.sh
+      ./configure \
+        --prefix=/usr \
+        --localstatedir=/var \
+        --enable-ssl \
+        --sysconfdir=/etc
+      make -j$CRAFT_PARALLEL_BUILD_COUNT
+      make check TESTSUITEFLAGS="-j $CRAFT_PARALLEL_BUILD_COUNT"
+      make install DESTDIR=$CRAFT_PART_INSTALL
     override-stage: |
-      snapcraftctl stage
-      snapcraftctl set-version $(dpkg-deb -f $CRAFT_PART_SRC/../stage_packages/ovn-host*.deb Version | sed -rne 's/([0-9.]+)[-+].*$$/\1/p')
-    organize:
-       # Deal with alternatives usage in deb packages.
-       usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk: usr/sbin/ovs-vswitchd
+      craftctl set version=$(git -C $CRAFT_PART_SRC describe --always | sed -e 's/-/+git/;y/-/./' | sed -s 's/^v//')
+      craftctl default
+    build-packages:
+      - autoconf
+      - automake
+      - bzip2
+      - graphviz
+      - libcap-ng-dev
+      - libnuma-dev
+      - libpcap-dev
+      - libssl-dev
+      - libtool
+      - libudev-dev
+      - libunbound-dev
+      - openssl
+      - pkg-config
+      - procps
+      - python3-all-dev
+      - python3-setuptools
+      - python3-sortedcontainers
+      - python3-sphinx
+      - tcpdump
 
   ovs-wrapper:
     source: ./snap/local/snap-wrappers/ovs
