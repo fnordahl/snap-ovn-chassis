@@ -38,10 +38,6 @@ environment:
   OVS_BINDIR: $SNAP/usr/bin
   OVS_SBINDIR: $SNAP/usr/sbin
 
-architectures:
-  - build-on: amd64
-  - build-on: arm64
-
 apps:
   # Openvswitch
   ovs-vswitchd:
