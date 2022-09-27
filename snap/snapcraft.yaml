@@ -144,14 +144,24 @@ parts:
     plugin: nil
     stage-packages:
       - openvswitch-switch
-      - openvswitch-switch-dpdk
       - ovn-host
+      - on amd64:
+        - openvswitch-switch-dpdk
+      - on arm64:
+        - openvswitch-switch-dpdk
+      - on ppc64el:
+        - openvswitch-switch-dpdk
     override-stage: |
       snapcraftctl stage
       snapcraftctl set-version $(dpkg-deb -f $CRAFT_PART_SRC/../stage_packages/ovn-host*.deb Version | sed -rne 's/([0-9.]+)[-+].*$$/\1/p')
-    organize:
-       # Deal with alternatives usage in deb packages.
-       usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk: usr/sbin/ovs-vswitchd
+    override-prime: |
+      craftctl default
+      # We need to do this here as the `organize` key does not allow
+      # advanced grammar.
+      if [ $SNAP_ARCH != s390x ]; then
+          # Deal with alternatives usage in deb packages.
+          mv usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk usr/sbin/ovs-vswitchd
+      fi
 
   ovs-wrapper:
     source: ./snap/local/snap-wrappers/ovs
