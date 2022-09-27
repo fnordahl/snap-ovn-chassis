@@ -190,7 +190,7 @@ parts:
     plugin: autotools
     source: https://github.com/ovn-org/ovn.git
     source-type: git
-    source-branch: branch-22.06
+    source-branch: branch-22.09
     override-build: |
       # This OVS build is used as a build time dependency for OVN and not the
       # version installed.  See the `ovs` part above for the installed
