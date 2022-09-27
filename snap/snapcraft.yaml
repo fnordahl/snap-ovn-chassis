@@ -18,6 +18,7 @@ description: |
  overlays and security groups.
 icon: snap/local/ovn-logo.png
 grade: stable
+license: Apache-2.0 OR BSD-3-Clause OR BSD-2-Clause OR GPL-2.0-only OR LGPL-2.1-only OR SISSL OR ISC OR Unlicense
 confinement: strict
 environment:
   LC_ALL: C
