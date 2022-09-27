@@ -145,14 +145,15 @@ parts:
     source: https://github.com/openvswitch/ovs.git
     source-type: git
     source-branch: branch-3.0
-    autotools-configure-parameters:
-      - --prefix=/usr
-      - --localstatedir=/var
-      - --enable-ssl
-      - --sysconfdir=/etc
-      - --with-dpdk=shared
+    build-environment:
+      - CONFIGURE_PARAMETERS: --prefix=/usr --localstatedir=/var --enable-ssl --sysconfdir=/etc --with-dpdk=shared
+      - on s390x:
+        - CONFIGURE_PARAMETERS: --prefix=/usr --localstatedir=/var --enable-ssl --sysconfdir=/etc
     override-build: |
-      craftctl default
+      ./boot.sh
+      ./configure $CONFIGURE_PARAMETERS
+      make -j$CRAFT_PARALLEL_BUILD_COUNT
+      make install DESTDIR=$CRAFT_PART_INSTALL
       make check TESTSUITEFLAGS="-j$CRAFT_PARALLEL_BUILD_COUNT"
     build-packages:
       - autoconf
@@ -163,7 +164,6 @@ parts:
       - iproute2
       - libcap-ng-dev
       - libdbus-1-dev
-      - libdpdk-dev
       - libnuma-dev
       - libpcap-dev
       - libssl-dev
@@ -176,12 +176,25 @@ parts:
       - python3-setuptools
       - python3-sortedcontainers
       - python3-sphinx
+      - on amd64:
+        - libdpdk-dev
+      - on arm64:
+        - libdpdk-dev
+      - on ppc64el:
+        - libdpdk-dev
     stage-packages:
-      - dpdk
-      - librte-meta-net
       - libevent-2.1-7
       - libunbound8
       - python3-sortedcontainers
+      - on amd64:
+        - dpdk
+        - librte-meta-net
+      - on arm64:
+        - dpdk
+        - librte-meta-net
+      - on ppc64el:
+        - dpdk
+        - librte-meta-net
 
   ovn:
     plugin: autotools
