@@ -1,0 +1,31 @@
+Description: There is currently no way to influence build/install decisions for
+  the third-party submodules through the p4-dpdk-target build system,
+   so we need to patch it.
+   * Python 3.8 is not the Python in Core 22
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 8ba7be1..de4bce8 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -11,7 +11,7 @@ bfruntime_grpc_protocoldir = $(bf_rt_shareddir)/proto
+ dist_bfruntime_grpc_protocol_DATA = bf_rt/proto/bfruntime.proto
+ 
+ if IS_BFRT_ENABLED
+-bfrt_pythondir = $(libdir)/python3.8
++bfrt_pythondir = $(libdir)/python3.10
+ bfrt_python_DATA = $(bfrt_python_python_sources) $(tdi_python_python_sources)
+ bfrt_python_python_sources = \
+ bf_rt/bf_rt_python/bfrtInfo.py \
+@@ -269,10 +269,10 @@ libdriver_la_LDFLAGS = -Wl,-Bsymbolic
+ libdriver_la_LDFLAGS += -ltarget_utils
+ 
+ if IS_BFRT_ENABLED
+-libdriver_la_LDFLAGS += -lpython3.8 -ltdi -ltdi_pna 
++libdriver_la_LDFLAGS += -lpython3.10 -ltdi -ltdi_pna
+ else
+ if IS_DEBUG_PYTHON_SHELL_ENABLED
+-libdriver_la_LDFLAGS += -lpython3.8
++libdriver_la_LDFLAGS += -lpython3.10
+ endif #IS_DEBUG_PYTHON_SHELL_ENABLED
+ endif #IS_BFRT_ENABLED
+ if COVERAGE

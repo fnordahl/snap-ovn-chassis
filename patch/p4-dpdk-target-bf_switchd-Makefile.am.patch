@@ -1,0 +1,19 @@
+Description: There is currently no way to influence build/install decisions for
+  the third-party submodules through the p4-dpdk-target build system,
+   so we need to patch it.
+   * The entry point of $(prefix) may be a symbolic link, and the current code
+     does not cope with that.
+
+diff --git a/bf_switchd/Makefile.am b/bf_switchd/Makefile.am
+index 790cbb8..f183610 100644
+--- a/bf_switchd/Makefile.am
++++ b/bf_switchd/Makefile.am
+@@ -54,7 +54,7 @@ bf_switchd_LDFLAGS += -lgcov
+ endif
+ endif
+ 
+-dpdk_lib != find $(prefix) -name librte_eal.so | xargs dirname
++dpdk_lib != find -H $(prefix) -name librte_eal.so | xargs dirname
+ libbf_switchd_lib_la_LDFLAGS += -Wl,-rpath-link,$(dpdk_lib)
+ libbf_switchd_lib_la_LIBADD += -ltarget_sys -ltarget_utils -ldriver -lstdc++ -ldpdk_infra -lclish -lcjson
+ 

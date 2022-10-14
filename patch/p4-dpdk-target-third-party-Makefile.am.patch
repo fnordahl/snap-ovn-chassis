@@ -1,0 +1,19 @@
+Description: There is currently no way to influence build/install decisions for
+  the third-party submodules through the p4-dpdk-target build system,
+   so we need to patch it.
+   * The CPython/libpython submodules are pinned to a version not
+     necessarily compatible with the Python in the target base, and
+     I see no reason why they need to be built from source, skip.
+
+diff --git a/third-party/Makefile.am b/third-party/Makefile.am
+index 5733162..2486ae5 100644
+--- a/third-party/Makefile.am
++++ b/third-party/Makefile.am
+@@ -1,6 +1,6 @@
+ all:
+ 	mkdir -p tdi/build
+-	cd tdi/build && cmake -DCMAKE_INSTALL_PREFIX=$(prefix) -DCPYTHON=1 -DSTANDALONE=ON ..
++	cd tdi/build && cmake -DCMAKE_INSTALL_PREFIX=$(prefix) -DSTANDALONE=ON ..
+ 	$(MAKE) -C tdi/build -j
+ 	$(MAKE) -C tdi/build install
+ 	mkdir -p tdi/third-party/googletest/build

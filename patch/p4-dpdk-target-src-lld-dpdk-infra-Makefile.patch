@@ -1,0 +1,25 @@
+Description: There is currently no way to influence build/install decisions for
+  the third-party submodules through the p4-dpdk-target build system,
+   so we need to patch it.
+   * We need to control LDFLAGS and PKG_CONFIG_PATH during build, this Makefile
+     overrides them, so we need to patch that behavior.
+
+diff --git a/src/lld/dpdk/infra/Makefile b/src/lld/dpdk/infra/Makefile
+index f162467..b71b60b 100644
+--- a/src/lld/dpdk/infra/Makefile
++++ b/src/lld/dpdk/infra/Makefile
+@@ -11,12 +11,12 @@ SRCS-y += dpdk_obj.c
+ SRCS-y += dpdk_thread.c
+ SRCS-y += dpdk_conn.c
+ PC_FILE := $(shell find $(install_dir) -name libdpdk.pc)
+-PKG_CONFIG_PATH := $(shell dirname $(PC_FILE))
++# PKG_CONFIG_PATH := $(shell dirname $(PC_FILE))
+ 
+ PKGCONF ?= pkg-config
+ 
+ CFLAGS += -O3 -fPIC $(shell PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' $(PKGCONF) --cflags libdpdk)
+-LDFLAGS = $(shell PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' $(PKGCONF) --libs libdpdk)
++LDFLAGS += $(shell PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' $(PKGCONF) --libs libdpdk)
+ #This is needed as we are compiling a library on top of shared library
+ #as-needed will strip of all unused libraries
+ STRING = -Wl,--as-needed
