@@ -7,3 +7,11 @@ for component in ovn openvswitch; do
     mkdir -p $SNAP_COMMON/$dir/$component
   done
 done
+
+mkdir -p $SNAP_COMMON/run/dpdk
+
+# P4 OVS
+mkdir -p /etc/stratum
+touch /etc/stratum/pipeline_cfg.pb.txt
+mkdir -p /usr/share/target_sys
+cp $SNAP/share/target_sys/zlog-cfg /usr/share/target_sys

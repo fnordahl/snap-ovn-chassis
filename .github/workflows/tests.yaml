@@ -32,29 +32,7 @@ jobs:
           set -euxo pipefail
           sudo modprobe openvswitch
           sudo modprobe nf_conntrack
-          sudo snap install *.snap --dangerous
-          # Since we have no snap interface auto-connection here, on install
-          # the daemons will not be happy and complain a lot.  Clear out the
-          # logs so that we will be able to get a clear reading on their state
-          # after the test.
-          sudo snap stop ovn-chassis
-          sudo sh -c \
-            ":> /var/snap/ovn-chassis/common/log/openvswitch/ovs-vswitchd.log"
-          sudo sh -c \
-            ":> /var/snap/ovn-chassis/common/log/ovn/ovn-controller.log"
-          for interface in \
-                  network \
-                  network-bind \
-                  network-control \
-                  firewall-control \
-                  process-control \
-                  system-trace \
-                  hardware-observe \
-                  hugepages-control \
-                  ; do
-              sudo snap connect ovn-chassis:$interface
-          done
-          sudo snap start ovn-chassis
+          sudo snap install *.snap --dangerous --classic
           sudo mkdir /var/snap/ovn-chassis/common/tmp
           sudo chmod 1777 /var/snap/ovn-chassis/common/tmp
 

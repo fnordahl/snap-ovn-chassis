@@ -19,10 +19,20 @@ description: |
 icon: snap/local/ovn-logo.png
 grade: stable
 license: Apache-2.0 OR BSD-3-Clause OR BSD-2-Clause OR GPL-2.0-only OR LGPL-2.1-only OR SISSL OR ISC OR Unlicense
-confinement: strict
+confinement: classic
 environment:
+  # To enable execution of binaries from snap, and the host operating system,
+  # we patch all ELF binaries shipped with the snap in the 'patchelf' part
+  # instead of using the LD_LIBRARY_PATH environment variable.
+  #
+  # This is required because both libc and other standard libraries hard code
+  # the path to /bin/sh, and uses that to execute other binaries.  The path to
+  # /bin/sh is part of POSIX, so we can't really blame them.  Any attempt to
+  # execute /bin/sh from host operating system with LD_LIBRARY_PATH pointing
+  # to the snap will make the execution abort or fault.
+  LD_LIBRARY_PATH: ""
   LC_ALL: C
-  PATH: usr/sbin:$SNAP/usr/bin:$SNAP/sbin:$SNAP/bin:$SNAP/usr/local/bin:$SNAP/usr/local/sbin:$PATH
+  PATH: $SNAP/usr/sbin:$SNAP/usr/bin:$SNAP/bin:$PATH
   # OVN runtime configuration
   OVN_LOGDIR: $SNAP_COMMON/log/ovn
   OVN_RUNDIR: $SNAP_COMMON/run/ovn
@@ -33,18 +43,14 @@ environment:
   # OVS runtime configuration
   OVS_LOGDIR: $SNAP_COMMON/log/openvswitch
   OVS_RUNDIR: $SNAP_COMMON/run/openvswitch
+  RUNTIME_DIRECTORY: $SNAP_COMMON/run/dpdk
   OVS_SYSCONFDIR: $SNAP_COMMON/etc
   OVS_PKGDATADIR: $SNAP/usr/share/openvswitch
   OVS_BINDIR: $SNAP/usr/bin
   OVS_SBINDIR: $SNAP/usr/sbin
   # P4 OVS Python commands
-  PYTHONPATH: $SNAP/usr/lib/python3.10:$SNAP/lib/python3.10/site-packages:$SNAP/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
-
-layout:
-  /usr/share/stratum:
-    bind: $SNAP/usr/share/stratum
-  /usr/share/target_sys:
-    bind: $SNAP/usr/share/target_sys
+  PYTHONHOME: $SNAP
+  PYTHONPATH: $SNAP/usr/lib/python3.10:$SNAP/lib/python3.10/site-packages:$SNAP/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10/lib-dynload:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
 
 apps:
   # Openvswitch
@@ -166,7 +172,13 @@ apps:
     command: usr/bin/ovs_pipeline_builder
 
 parts:
-  # Common Python dependencies
+  # Python interpreter and common Python dependencies
+  #
+  # When using classic confinement, we need to bring our own Python
+  # interpreter.  A side effect of that is that this part needs to be after
+  # any part using the snapcraft python plugin, otherwise the presence of
+  # the Python interpreter in the $CRAFT_PART_INSTALL tree will conflict with
+  # per part virtualenv initialization.
   #
   # Once the stage environment is populated with a Python environment,
   # subsequent parts build sequences will use Python from the stage environment
@@ -187,10 +199,15 @@ parts:
   # to prune its artifacts in a part rigged for execution late in the parts
   # lifecycle.
   python:
+    after: [grpcio, ovspy, google-api-core, p4runtime]
     plugin: nil
     stage-packages:
       - libpython3.10
-      - cython3
+      - libpython3.10-minimal
+      - libpython3.10-stdlib
+      - python3-minimal
+      - python3.10-minimal
+      - python3.10-venv
       - meson
       - python3-pyelftools
       - python3-scapy
@@ -198,12 +215,9 @@ parts:
       - python3-sortedcontainers
       - python3-sphinx
       - python3-sphinx-rtd-theme
-      - python3.10-venv
-    build-snaps:
-      - core22
 
   grpcio:
-    after: [python, grpc]
+    after: [grpc]
     plugin: python
     source: https://github.com/google/grpc.git
     source-branch: v1.42.0
@@ -215,7 +229,6 @@ parts:
       - GRPC_PYTHON_BUILD_SYSTEM_CARES: 1
       - GRPC_PYTHON_BUILD_SYSTEM_OPENSSL: 1
       - GRPC_PYTHON_ENABLE_DOCUMENTATION_BUILD: 1
-      - PYTHONPATH: $CRAFT_STAGE/usr/lib/python3.10:$CRAFT_STAGE/lib/python3.10/site-packages:$CRAFT_STAGE/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
     build-packages:
       - zlib1g-dev
       - libssl-dev
@@ -227,37 +240,27 @@ parts:
       - lib/python3.10/site-packages/google/protobuf
 
   ovspy:
-    after: [python]
     plugin: python
     source: https://github.com/kamaboko123/ovspy.git
-    build-environment:
-      - PYTHONPATH: $CRAFT_STAGE/usr/lib/python3.10:$CRAFT_STAGE/lib/python3.10/site-packages:$CRAFT_STAGE/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
     stage:
       - lib/python3.10/site-packages/ovspy*
 
   google-api-core:
-    after: [python]
     plugin: python
     source: https://github.com/googleapis/python-api-core.git
     source-branch: v1.33.2
-    build-environment:
-      - PYTHONPATH: $CRAFT_STAGE/usr/lib/python3.10:$CRAFT_STAGE/lib/python3.10/site-packages:$CRAFT_STAGE/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
     stage:
       - lib/python3.10/site-packages/google/rpc
 
   p4runtime:
-    after: [python]
     plugin: python
     source: https://github.com/p4lang/p4runtime.git
     source-branch: v1.4.0-rc.5
     source-subdir: py
-    build-environment:
-      - PYTHONPATH: $CRAFT_STAGE/usr/lib/python3.10:$CRAFT_STAGE/lib/python3.10/site-packages:$CRAFT_STAGE/usr/lib/python3/dist-packages:/snap/core22/current/usr/lib/python3.10:/snap/core22/current/usr/lib/python3/dist-packages
     stage:
       - lib/python3.10/site-packages/p4
 
   abseil-cpp:
-    after: [python]
     plugin: cmake
     source: https://github.com/abseil/abseil-cpp.git
     source-branch: 20220623.1
@@ -270,7 +273,7 @@ parts:
       craftctl default
 
   grpc:
-    after: [python, abseil-cpp]
+    after: [abseil-cpp]
     plugin: cmake
     source: https://github.com/google/grpc.git
     source-branch: v1.42.0
@@ -357,6 +360,7 @@ parts:
       patch -p1 < $CRAFT_PROJECT_DIR/patch/p4-dpdk-target-third-party-Makefile.am.patch
       patch -p1 < $CRAFT_PROJECT_DIR/patch/p4-dpdk-target-src-lld-dpdk-infra-Makefile.patch
       patch -p1 < $CRAFT_PROJECT_DIR/patch/p4-dpdk-target-bf_switchd-Makefile.am.patch
+
       # The p4-dpdk-target project produces non-relocatable library archives,
       # so we need the prefix to point to the absolute path of the final
       # destination.
@@ -402,7 +406,17 @@ parts:
       - on s390x:
         - CONFIGURE_PARAMETERS: --prefix=/usr --localstatedir=/var --enable-ssl --sysconfdir=/etc
     override-build: |
-      ./apply_stratum_artifacts.sh $CRAFT_STAGE
+      # These steps do what the upstream `apply_stratum_artifacts.sh` script
+      # does, only in a relocatable fashion without polluting the build
+      # environment.
+      cd stratum
+      git apply ../external/PATCH-01-STRATUM
+      cd ..
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/stratum
+      cp stratum/stratum/hal/bin/barefoot/tofino_skip_p4_no_bsp.conf \
+          $CRAFT_PART_INSTALL/usr/share/stratum/tofino_skip_p4_no_bsp.conf
+      cp external/dpdk_port_config.pb.txt \
+          $CRAFT_PART_INSTALL//usr/share/stratum/dpdk_port_config.pb.txt
 
       # This is needed because of the p4-dpdk-target part, please refer to
       # comments with further explanation there.
@@ -524,3 +538,49 @@ parts:
     plugin: dump
     organize:
       ovs-wrapper: bin/ovs-wrapper
+
+  p4c-runtime-deps:
+    after: [ovs]
+    plugin: nil
+    stage-packages:
+      - g++
+
+  patchelf:
+    after: [p4c-runtime-deps]
+    plugin: nil
+    build-packages:
+      - patchelf
+      - file
+    override-prime: |
+      # patchelf
+      #
+      # To allow for a classic snap that works across multiple operating system
+      # runtime environments, we need to ensure all shipped binaries consume
+      # libraries from the core or shipped snap.  We accomplish this by
+      # patching RPATH or interpreter into dynamically linked binaries.
+      #
+      # /snap/core22/current/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+      # /snap/core22/current/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+      # /snap/core22/current/lib/powerpc64le-linux-gnu/ld64.so.2
+      # /snap/core22/current/lib/s390x-linux-gnu/ld64.so.1
+      interp_prefix=/snap/core22/current/lib/$CRAFT_ARCH_TRIPLET
+      ld_arch=$(echo $CRAFT_TARGET_ARCH | sed -e 's,amd64,x86-64,' -e 's,arm64,aarch64,')
+      for interp in "ld-linux-${ld_arch}.so.?" "ld64.so.?" "/dev/null"; do
+          if [ -e ${interp_prefix}/${interp} ]; then
+              break
+          fi
+      done
+      if [ $interp = /dev/null ]; then
+          echo "Unable to determine name of shared library interpreter."
+          exit 1
+      fi
+
+      for binary in \
+        $(find . -exec file {} \; | awk -F\: '/ELF.*dynamic/{print$1}'); do
+          patchelf \
+              --force-rpath \
+              --set-rpath /snap/core22/current/usr/lib/$CRAFT_ARCH_TRIPLET:/snap/$CRAFT_PROJECT_NAME/current/lib:/snap/$CRAFT_PROJECT_NAME/current/lib/$SNAPCRAFT_ARCH_TRIPLET:/snap/$CRAFT_PROJECT_NAME/current/usr/lib:/snap/$CRAFT_PROJECT_NAME/current/usr/lib/$SNAPCRAFT_ARCH_TRIPLET \
+              $binary
+
+          patchelf --set-interpreter $interp_prefix/$interp $binary || true
+      done
