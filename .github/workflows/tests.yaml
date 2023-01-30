@@ -54,7 +54,7 @@ jobs:
                   ; do
               sudo snap connect ovn-chassis:$interface
           done
-          sudo snap start ovn-chassis
+          # sudo snap start ovn-chassis
           sudo mkdir /var/snap/ovn-chassis/common/tmp
           sudo chmod 1777 /var/snap/ovn-chassis/common/tmp
 
@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          patch -d ovn -p1 < tests/ovn-testsuite.patch
+          # patch -d ovn -p1 < tests/ovn-testsuite.patch
           # We need to execute testsuite within the snap common directory
           # because the testsuite will expect binaries in the snap to talk to
           # sockets set up for NB and SB DBs in the testsuite directory.
@@ -92,7 +92,7 @@ jobs:
           sudo snap alias ovn-chassis.ovn-appctl ovn-appctl
           sudo snap alias ovn-chassis.ovs-ofctl ovs-ofctl
           cd /var/snap/ovn-chassis/common/tmp/ovn
-          make check-kernel AUTOTEST_PATH=/snap/bin:ovs/ovsdb:northd:utilities:tests SUDO=sudo TESTSUITEFLAGS=1
+          make check-kernel AUTOTEST_PATH=tests SUDO=sudo TESTSUITEFLAGS=1
           sudo dmesg | (grep -v DENIED.*systemctl || true) |grep DENIED || true
           sudo grep ERR /var/snap/ovn-chassis/common/log/openvswitch/ovs-vswitchd.log || true
           sudo grep ERR /var/snap/ovn-chassis/common/log/ovn/ovn-controller.log || true
